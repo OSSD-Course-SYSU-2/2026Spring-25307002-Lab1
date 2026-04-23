@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>泡泡解压小游戏 - 治愈鼓励版</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        body {
+            min-height: 100vh;
+            background: linear-gradient(145deg, #a0c0ff 0%, #5a7bc0 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Segoe UI', 'Comic Neue', system-ui, sans-serif;
+            padding: 20px;
+            transition: background 0.3s ease;
+        }
+        .game-container {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(12px);
+            border-radius: 64px;
+            padding: 24px 20px 30px;
+            box-shadow: 0 25px 45px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 500px;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .stat-card {
+            flex: 1;
+            text-align: center;
+            background: white;
+            padding: 8px 12px;
+            border-radius: 40px;
+            box-shadow: 0 5px 10px rgba(0,0,0,0.1);
+            min-width: 70px;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #3a4a7a;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: 800;
+            color: #2c3e6d;
+            line-height: 1;
+        }
+        .combo-indicator {
+            background: linear-gradient(135deg, #ffaa44, #ff6644);
+            border-radius: 60px;
+            padding: 6px 16px;
+            text-align: center;
+            color: white;
+            font-weight: bold;
+            font-size: 18px;
+            margin-bottom: 12px;
+            transition: all 0.1s ease;
+            box-shadow: 0 0 10px rgba(255,100,0,0.5);
+        }
+        .pressure-area {
+            margin: 12px 0;
+        }
+        .pressure-header {
+            display: flex;
+            justify-content: space-between;
+            font-weight: bold;
+            color: white;
+            text-shadow: 0 1px 2px black;
+            margin-bottom: 6px;
+        }
+        .pressure-bar-bg {
+            background-color: rgba(0,0,0,0.3);
+            border-radius: 40px;
+            height: 18px;
+            overflow: hidden;
+        }
+        .pressure-fill {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #ff5e7c, #ffb347);
+            border-radius: 40px;
+            transition: width 0.2s ease;
+        }
+        .bubble-canvas {
+            display: block;
+            width: 100%;
+            background: rgba(255,255,255,0.2);
+            border-radius: 56px;
+            margin: 16px 0;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+        .buttons {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            margin-top: 12px;
+        }
+        button {
+            background: rgba(255,255,245,0.9);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 60px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            backdrop-filter: blur(4px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            transition: 0.1s linear;
+            cursor: pointer;
+        }
+        button:active {
+            transform: scale(0.96);
+        }
+        .floating-text {
+            position: fixed;
+            pointer-events: none;
+            font-weight: bold;
+            font-size: 24px;
+            color: gold;
+            text-shadow: 0 0 5px darkorange;
+            z-index: 200;
+            animation: floatUp 0.8s ease-out forwards;
+        }
+        .encourage-text {
+            position: fixed;
+            pointer-events: none;
+            font-weight: bold;
+            font-size: 22px;
+            color: #fff5cc;
+            text-shadow: 0 0 8px #ff66aa, 0 0 3px #ff3399;
+            background: rgba(0,0,0,0.3);
+            backdrop-filter: blur(8px);
+            padding: 8px 18px;
+            border-radius: 60px;
+            white-space: nowrap;
+            z-index: 201;
+            animation: encourageFloat 1.2s ease-out forwards;
+            font-family: 'Comic Neue', 'Segoe UI', cursive;
+        }
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translateY(0px) scale(1); }
+            100% { opacity: 0; transform: translateY(-80px) scale(1.5); }
+        }
+        @keyframes encourageFloat {
+            0% { opacity: 1; transform: translateY(0px) scale(0.8); }
+            30% { transform: translateY(-20px) scale(1.1); }
+            100% { opacity: 0; transform: translateY(-100px) scale(1); }
+        }
+        @media (max-width: 480px) {
+            .stat-card { padding: 4px 8px; }
+            .stat-value { font-size: 20px; }
+            button { padding: 8px 16px; font-size: 0.8rem; }
+            .encourage-text { font-size: 16px; padding: 5px 12px; white-space: nowrap; }
+        }
+    </style>
+</head>
+<body>
+<div class="game-container">
+    <div class="stats">
+        <div class="stat-card"><div class="stat-label">🎈 爆破次数</div><div class="stat-value" id="popCount">0</div></div>
+        <div class="stat-card"><div class="stat-label">😊 愉悦积分</div><div class="stat-value" id="joyScore">0</div></div>
+        <div class="stat-card"><div class="stat-label">🏆 最高分</div><div class="stat-value" id="highScore">0</div></div>
+    </div>
+    <div class="combo-indicator" id="comboDisplay">🔥 连击 0x</div>
+    <div class="pressure-area">
+        <div class="pressure-header"><span>📉 压力值</span><span id="pressurePercent">100</span>%</div>
+        <div class="pressure-bar-bg"><div class="pressure-fill" id="pressureFill" style="width: 100%;"></div></div>
+    </div>
+    <canvas id="bubbleCanvas" class="bubble-canvas" width="400" height="400" style="height: auto; aspect-ratio: 1 / 1;"></canvas>
+    <div class="buttons">
+        <button id="resetBtn">🌀 重置压力</button>
+        <button id="moreBubblesBtn">✨ 更多泡泡</button>
+    </div>
+</div>
+<script>
+    (function(){
+        // ----- 鼓励话语库 -----
+        const ENCOURAGE_MESSAGES = [
+            "✨ 你超棒的！", "💪 今天也要加油！", "🌸 一切都会变好~",
+            "🌟 你已经很厉害了！", "🍀 好事正在发生", "💖 你值得被温柔对待",
+            "🎉 压力-1，快乐+1！", "🌈 今天也是美好的一天", "⭐ 相信你自己！",
+            "💎 你是独一无二的", "🌻 向阳而生，逐光而行", "🍃 放轻松，慢慢来",
+            "💫 你比想象中更强大", "🕊️ 烦恼都会飞走的", "🎈 像泡泡一样把不开心放走",
+            "💕 你已经做得很好了", "🌙 今天辛苦啦", "☕️ 休息一下，继续前进",
+            "🎯 你可以的！", "💪 拒绝内耗，从这一秒开始"
+        ];
+
+        // 随机获取鼓励语
+        function getRandomEncourage() {
+            return ENCOURAGE_MESSAGES[Math.floor(Math.random() * ENCOURAGE_MESSAGES.length)];
+        }
+
+        // 显示鼓励语飘字
+        function showEncourageMessage(x, y) {
+            const msg = getRandomEncourage();
+            const div = document.createElement('div');
+            div.className = 'encourage-text';
+            div.innerText = msg;
+            // 获取canvas在屏幕上的位置
+            const rect = canvas.getBoundingClientRect();
+            div.style.left = (rect.left + x - 40) + 'px';
+            div.style.top = (rect.top + y - 50) + 'px';
+            document.body.appendChild(div);
+            setTimeout(() => { if(div && div.remove) div.remove(); }, 1200);
+        }
+
+        const canvas = document.getElementById('bubbleCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let popCount = 0;
+        let joyScore = 0;
+        let pressure = 100;
+        let combo = 0;
+        let highScore = 0;
+
+        let bubbles = [];
+        let canvasWidth = 400, canvasHeight = 400;
+
+        // 加载本地最高分
+        try {
+            let saved = localStorage.getItem('bubbleHighScore');
+            if(saved && !isNaN(parseInt(saved))) highScore = parseInt(saved);
+            document.getElementById('highScore').innerText = highScore;
+        } catch(e) { console.log("localStorage not supported"); }
+
+        function saveHighScore() {
+            if(joyScore > highScore) {
+                highScore = joyScore;
+                document.getElementById('highScore').innerText = highScore;
+                try { localStorage.setItem('bubbleHighScore', highScore); } catch(e) {}
+                showFloatingText("🏆 新纪录！", canvasWidth/2, canvasHeight/2, "#ffcc44");
+            }
+        }
+
+        function showFloatingText(msg, x, y, color="#ffaa33") {
+            const div = document.createElement('div');
+            div.className = 'floating-text';
+            div.innerText = msg;
+            div.style.left = (canvas.getBoundingClientRect().left + x) + 'px';
+            div.style.top = (canvas.getBoundingClientRect().top + y - 20) + 'px';
+            div.style.color = color;
+            div.style.fontSize = '28px';
+            document.body.appendChild(div);
+            setTimeout(() => { if(div && div.remove) div.remove(); }, 800);
+        }
+
+        function resizeCanvas() {
+            const rect = canvas.getBoundingClientRect();
+            const w = rect.width;
+            const h = rect.height;
+            canvas.width = w;
+            canvas.height = h;
+            canvasWidth = w;
+            canvasHeight = h;
+            for(let b of bubbles) {
+                b.x = Math.min(Math.max(b.x, b.radius), canvasWidth - b.radius);
+                b.y = Math.min(Math.max(b.y, b.radius), canvasHeight - b.radius);
+            }
+        }
+
+        function createBubble(x=null, y=null, type=null) {
+            const radius = 20 + Math.random() * 32;
+            const isGolden = (type === 'golden') ? true : (Math.random() < 0.2);
+            return {
+                x: x !== null ? x : Math.random() * (canvasWidth - 2*radius) + radius,
+                y: y !== null ? y : Math.random() * (canvasHeight - 2*radius) + radius,
+                radius: radius,
+                vx: (Math.random() - 0.5) * 1.2,
+                vy: (Math.random() - 0.5) * 1.2,
+                isGolden: isGolden
+            };
+        }
+
+        function initBubbles(num=12) {
+            bubbles = [];
+            for(let i=0;i<num;i++) {
+                bubbles.push(createBubble());
+            }
+        }
+
+        function addMoreBubbles(count=3) {
+            for(let i=0;i<count;i++) {
+                bubbles.push(createBubble());
+            }
+        }
+
+        function drawBubbles() {
+            for(let b of bubbles) {
+                if(b.isGolden) {
+                    const grad = ctx.createRadialGradient(b.x-5, b.y-5, 5, b.x, b.y, b.radius);
+                    grad.addColorStop(0, '#FFE55C');
+                    grad.addColorStop(0.7, '#FFB347');
+                    grad.addColorStop(1, '#E59500');
+                    ctx.beginPath();
+                    ctx.arc(b.x, b.y, b.radius, 0, Math.PI*2);
+                    ctx.fillStyle = grad;
+                    ctx.fill();
+                    ctx.strokeStyle = '#FFD966';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                    ctx.font = `${Math.floor(b.radius * 0.6)}px "Segoe UI"`;
+                    ctx.fillStyle = "#FFE484";
+                    ctx.shadowBlur = 4;
+                    ctx.fillText("⭐", b.x-12, b.y+8);
+                    ctx.shadowBlur = 0;
+                } else {
+                    const grad = ctx.createRadialGradient(b.x-5, b.y-5, 5, b.x, b.y, b.radius);
+                    grad.addColorStop(0, 'rgba(255,255,245,0.95)');
+                    grad.addColorStop(0.6, 'rgba(180,230,255,0.85)');
+                    grad.addColorStop(1, 'rgba(100,180,250,0.7)');
+                    ctx.beginPath();
+                    ctx.arc(b.x, b.y, b.radius, 0, Math.PI*2);
+                    ctx.fillStyle = grad;
+                    ctx.fill();
+                    ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+                    ctx.lineWidth = 1.5;
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.arc(b.x-4, b.y-4, b.radius*0.2, 0, Math.PI*2);
+                    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+                    ctx.fill();
+                }
+            }
+        }
+
+        function updateUI() {
+            document.getElementById('popCount').innerText = popCount;
+            document.getElementById('joyScore').innerText = joyScore;
+            document.getElementById('pressurePercent').innerText = Math.floor(pressure);
+            const fillWidth = Math.max(0, (pressure / 100) * 100);
+            document.getElementById('pressureFill').style.width = fillWidth + '%';
+            const fillDiv = document.getElementById('pressureFill');
+            if(pressure > 70) fillDiv.style.background = "linear-gradient(90deg, #f55555, #ff8c42)";
+            else if(pressure > 30) fillDiv.style.background = "linear-gradient(90deg, #ffb347, #ffe35e)";
+            else fillDiv.style.background = "linear-gradient(90deg, #6bc46d, #a2e4a0)";
+            const comboDisplay = document.getElementById('comboDisplay');
+            if(combo >= 3) {
+                comboDisplay.innerText = `⚡ ${combo} 连击！分数x${Math.min(combo, 5)}`;
+                comboDisplay.style.background = "linear-gradient(135deg, #ffaa44, #ff3300)";
+                comboDisplay.style.transform = "scale(1.02)";
+            } else {
+                comboDisplay.innerText = `🔥 连击 ${combo}x`;
+                comboDisplay.style.background = "linear-gradient(135deg, #ffaa44, #ff6644)";
+                comboDisplay.style.transform = "scale(1)";
+            }
+        }
+
+        function playPopSound() {
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                const ctxAudio = new AudioContext();
+                const osc = ctxAudio.createOscillator();
+                const gain = ctxAudio.createGain();
+                osc.connect(gain);
+                gain.connect(ctxAudio.destination);
+                osc.type = 'sine';
+                osc.frequency.value = 880;
+                gain.gain.value = 0.12;
+                osc.start();
+                gain.gain.exponentialRampToValueAtTime(0.00001, ctxAudio.currentTime + 0.3);
+                osc.stop(ctxAudio.currentTime + 0.3);
+                setTimeout(() => { ctxAudio.close(); }, 400);
+            } catch(e) {}
+        }
+
+        function burstEffect(x, y, radius, isGolden=false) {
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(x, y, radius*0.8, 0, Math.PI*2);
+            ctx.fillStyle = isGolden ? 'rgba(255,215,0,0.9)' : 'rgba(255,230,140,0.9)';
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(x, y, radius*0.4, 0, Math.PI*2);
+            ctx.fillStyle = 'white';
+            ctx.fill();
+            ctx.restore();
+        }
+
+        function handleTap(e) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            let clientX, clientY;
+            if(e.touches) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+                e.preventDefault();
+            } else {
+                clientX = e.clientX;
+                clientY = e.clientY;
+            }
+            const canvasX = (clientX - rect.left) * scaleX;
+            const canvasY = (clientY - rect.top) * scaleY;
+
+            let hit = false;
+            for(let i=bubbles.length-1; i>=0; i--) {
+                const b = bubbles[i];
+                const dx = canvasX - b.x;
+                const dy = canvasY - b.y;
+                if(Math.sqrt(dx*dx+dy*dy) <= b.radius) {
+                    hit = true;
+
+                    // ✨ 核心：每次点中泡泡，随机显示鼓励语 ✨
+                    showEncourageMessage(b.x, b.y);
+
+                    let addScore = 10;
+                    let addPressureReduction = 6;
+                    let isGolden = b.isGolden;
+
+                    if(isGolden) {
+                        addScore = 30;
+                        addPressureReduction = 12;
+                        showFloatingText("✨ 金色泡泡 +30", b.x, b.y, "#FFD966");
+                    }
+                    let comboBonus = 1 + Math.min(combo, 5) * 0.3;
+                    let finalScore = Math.floor(addScore * comboBonus);
+                    joyScore += finalScore;
+                    pressure = Math.max(0, pressure - addPressureReduction);
+
+                    combo++;
+                    if(combo >= 3) {
+                        showFloatingText(`${combo} Combo! x${(1+Math.min(combo,5)*0.3).toFixed(1)}`, b.x, b.y-15, "#ffaa33");
+                    }
+
+                    popCount++;
+                    updateUI();
+                    playPopSound();
+                    burstEffect(b.x, b.y, b.radius, isGolden);
+                    if(navigator.vibrate) navigator.vibrate(40);
+                    bubbles.splice(i,1);
+
+                    if(pressure <= 0) {
+                        pressure = 0;
+                        updateUI();
+                        joyScore += 80;
+                        showFloatingText("🎉 压力归零！ +80", canvasWidth/2, canvasHeight/2, "gold");
+                        addMoreBubbles(6);
+                        updateUI();
+                        document.body.style.transition = "0.2s";
+                        document.body.style.backgroundColor = "#ffeaa7";
+                        setTimeout(()=>{document.body.style.backgroundColor = "";}, 400);
+                    }
+                    saveHighScore();
+                    break;
+                }
+            }
+            if(!hit) {
+                if(combo > 0) {
+                    showFloatingText("连击中断...", canvasX, canvasY, "#ff8888");
+                    combo = 0;
+                    updateUI();
+                }
+            }
+            if(bubbles.length < 4) addMoreBubbles(2);
+        }
+
+        function updateAnimation() {
+            for(let b of bubbles) {
+                b.x += b.vx;
+                b.y += b.vy;
+                if(b.x - b.radius < 0) { b.x = b.radius; b.vx = -b.vx; }
+                if(b.x + b.radius > canvasWidth) { b.x = canvasWidth - b.radius; b.vx = -b.vx; }
+                if(b.y - b.radius < 0) { b.y = b.radius; b.vy = -b.vy; }
+                if(b.y + b.radius > canvasHeight) { b.y = canvasHeight - b.radius; b.vy = -b.vy; }
+            }
+        }
+
+        function draw() {
+            if(!ctx) return;
+            ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+            ctx.shadowBlur = 6;
+            ctx.shadowColor = "rgba(0,0,0,0.2)";
+            drawBubbles();
+            ctx.shadowBlur = 0;
+        }
+
+        function animate() {
+            updateAnimation();
+            draw();
+            requestAnimationFrame(animate);
+        }
+
+        function resetGame() {
+            popCount = 0;
+            joyScore = 0;
+            pressure = 100;
+            combo = 0;
+            initBubbles(10);
+            updateUI();
+            resizeCanvas();
+            saveHighScore();
+        }
+
+        function bindEvents() {
+            canvas.addEventListener('click', handleTap);
+            canvas.addEventListener('touchstart', (e) => {
+                handleTap(e);
+                e.preventDefault();
+            });
+            document.getElementById('resetBtn').addEventListener('click', () => resetGame());
+            document.getElementById('moreBubblesBtn').addEventListener('click', () => {
+                addMoreBubbles(4);
+                showFloatingText("+4 泡泡", canvasWidth/2, 30, "#88ccff");
+            });
+            window.addEventListener('resize', () => { resizeCanvas(); });
+        }
+
+        function startGame() {
+            resizeCanvas();
+            initBubbles(12);
+            bindEvents();
+            updateUI();
+            animate();
+        }
+
+        startGame();
+    })();
+</script>
+</body>
+</html>
