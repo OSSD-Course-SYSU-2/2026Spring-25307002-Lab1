@@ -3,7 +3,9 @@
     "name": "entry_test",
     "type": "feature",
     "deviceTypes": [
-      "phone"
+      "phone",
+      "tablet",
+      "wearable"
     ],
     "deliveryWithInstall": true,
     "installationFree": false
